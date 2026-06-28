@@ -1,19 +1,44 @@
 {
   "name": "wlady-code-mcp",
-  "version": "0.1.0",
-  "description": "WLADY_CODE - Advanced codebase intelligence MCP combining codebase-memory-mcp + ops-codegraph-tool",
+  "version": "0.2.0",
+  "description": "Advanced codebase intelligence MCP — 27 tools, tree-sitter AST parser, semantic embeddings + hybrid BM25+vector search, execution flow tracing, galaxy visualization",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "wlady-code": "dist/index.js"
+    "wlady-code-mcp": "dist/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "codebase",
+    "code-intelligence",
+    "ast",
+    "tree-sitter",
+    "embeddings",
+    "knowledge-graph",
+    "claude",
+    "ai"
+  ],
+  "author": "wladimania93",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wladimania93/wlady-code-mcp.git"
+  },
+  "homepage": "https://github.com/wladimania93/wlady-code-mcp#readme",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
