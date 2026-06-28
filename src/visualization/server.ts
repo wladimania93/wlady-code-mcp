@@ -2,7 +2,7 @@ import * as http from 'http';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
-import { getProjects, getGraph } from './graph-data.js';
+import { getProjects, getGraph, getSymbolsForFile, getProjectEntryPoints } from './graph-data.js';
 import { getVisualizationHtml } from './template.js';
 
 const DEFAULT_PORT = 9750;
@@ -81,6 +81,37 @@ export function startVisualizationServer(port = DEFAULT_PORT): void {
         }
         const content = fs.readFileSync(absPath, 'utf8');
         respond(res, 200, JSON.stringify({ content, absPath }));
+      } catch (err: any) {
+        respond(res, 500, JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (url.pathname === '/api/symbols') {
+      const projectId = url.searchParams.get('projectId');
+      const relPath = url.searchParams.get('relPath');
+      if (!projectId || !relPath) {
+        respond(res, 400, JSON.stringify({ error: 'projectId y relPath requeridos' }));
+        return;
+      }
+      try {
+        const symbols = getSymbolsForFile(projectId, relPath, dbPath());
+        respond(res, 200, JSON.stringify(symbols));
+      } catch (err: any) {
+        respond(res, 500, JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (url.pathname === '/api/entry-points') {
+      const projectId = url.searchParams.get('projectId');
+      if (!projectId) {
+        respond(res, 400, JSON.stringify({ error: 'projectId requerido' }));
+        return;
+      }
+      try {
+        const entryPoints = getProjectEntryPoints(projectId, dbPath());
+        respond(res, 200, JSON.stringify(entryPoints));
       } catch (err: any) {
         respond(res, 500, JSON.stringify({ error: err.message }));
       }
