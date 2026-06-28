@@ -83,6 +83,25 @@ function resetCommunities() {
   nextCommunity = 0;
 }
 
+// ── Symbol & entry-point types ───────────────────────────────────
+export interface SymbolItem {
+  id: number;
+  name: string;
+  kind: string;
+  start_line: number;
+  end_line: number;
+  role: string;
+  complexity_cyclomatic: number;
+}
+
+export interface EntryPointItem {
+  name: string;
+  kind: string;
+  filePath: string;
+  relPath: string;
+  startLine: number;
+}
+
 // ── API ─────────────────────────────────────────────────────────
 export function getProjects(dbPath = DEFAULT_DB): GraphProject[] {
   const db = requireDb(dbPath);
@@ -154,6 +173,71 @@ export function getGraph(projectId: string, dbPath = DEFAULT_DB): { nodes: Graph
     const edges: GraphEdge[] = edgeRows.map(r => ({ from: r.from_file_id, to: r.to_file_id }));
 
     return { nodes, edges };
+  } finally {
+    db.close();
+  }
+}
+
+export function getSymbolsForFile(projectId: string, relPath: string, dbPath = DEFAULT_DB): SymbolItem[] {
+  const db = requireDb(dbPath);
+  try {
+    return db.prepare(`
+      SELECT s.id, s.name, s.kind, s.start_line, s.end_line, s.role, s.complexity_cyclomatic
+      FROM symbols s
+      JOIN files f ON s.file_id = f.id
+      WHERE f.project_id = ? AND f.relative_path = ?
+      ORDER BY s.start_line
+    `).all(projectId, relPath) as SymbolItem[];
+  } finally {
+    db.close();
+  }
+}
+
+const ENTRY_STOP_WORDS = new Set([
+  'if','else','for','while','do','switch','case','return','break',
+  'continue','try','catch','finally','new','delete','typeof','void',
+  'throw','yield','await','super','this','in','of','from','as',
+]);
+
+export function getProjectEntryPoints(projectId: string, dbPath = DEFAULT_DB): EntryPointItem[] {
+  const db = requireDb(dbPath);
+  try {
+    // Combined query: role=entry OR name patterns OR entry-file symbols
+    const rows = db.prepare(`
+      SELECT DISTINCT s.name, s.kind, f.path AS file_path, f.relative_path, s.start_line
+      FROM symbols s
+      JOIN files f ON s.file_id = f.id
+      WHERE f.project_id = ?
+        AND (
+          s.role = 'entry'
+          OR LOWER(s.name) IN ('main','handler','index','start','run','bootstrap',
+                               'init','listen','serve','launch','setup',
+                               'createserver','createapp','makeapp')
+          OR s.name LIKE '%Handler'
+          OR s.name LIKE '%Controller'
+          OR s.name LIKE '%Router'
+          OR s.name LIKE '%Routes'
+          OR f.relative_path LIKE '%/index.ts'
+          OR f.relative_path LIKE '%/index.js'
+          OR f.relative_path LIKE '%/main.ts'
+          OR f.relative_path LIKE '%/main.js'
+          OR f.relative_path LIKE '%/app.ts'
+          OR f.relative_path LIKE '%/server.ts'
+        )
+        AND s.kind IN ('function','method','class')
+      ORDER BY f.relative_path, s.start_line
+      LIMIT 30
+    `).all(projectId) as any[];
+
+    return rows
+      .filter((r: any) => !ENTRY_STOP_WORDS.has(r.name))
+      .map((r: any) => ({
+        name: r.name,
+        kind: r.kind,
+        filePath: r.file_path,
+        relPath: r.relative_path,
+        startLine: r.start_line,
+      }));
   } finally {
     db.close();
   }
