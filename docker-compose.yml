@@ -1,0 +1,21 @@
+services:
+  wlady-code:
+    build: .
+    image: wlady-code-mcp:latest
+    # MCP uses raw stdio — keep stdin open, no TTY
+    stdin_open: true
+    tty: false
+    ports:
+      # Galaxy visualization UI
+      - "9750:9750"
+    volumes:
+      # Persistent symbol DB and model cache
+      - wlady-db:/root/.wlady-code-mcp
+      # Mount the repository you want to analyze (override with WORKSPACE_PATH)
+      - ${WORKSPACE_PATH:-.}:/workspace:ro
+    environment:
+      # Set to 1 to disable the visualization HTTP server
+      - WLADY_NO_VIZ=${WLADY_NO_VIZ:-}
+
+volumes:
+  wlady-db:

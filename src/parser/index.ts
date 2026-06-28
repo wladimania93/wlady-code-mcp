@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { getLanguageConfig, detectLanguage, BINARY_EXTENSIONS } from './languages.js';
+import { parseWithTreeSitter } from './tree-sitter.js';
 import type { ParseResult, ParsedSymbol, SymbolKind } from '../types.js';
 
 const STOP_WORDS = new Set([
@@ -29,6 +30,14 @@ export class CodeParser {
       return { symbols: [], imports: [], calls: [] };
     }
 
+    // Try tree-sitter AST parser first; fall back to regex on unsupported lang or error
+    const tsResult = parseWithTreeSitter(filePath, content);
+    if (tsResult !== null) return tsResult;
+
+    return this.parseWithRegex(filePath, content);
+  }
+
+  private parseWithRegex(filePath: string, content: string): ParseResult {
     const ext = path.extname(filePath).toLowerCase();
     const config = getLanguageConfig(ext);
     const lines = content.split('\n');
