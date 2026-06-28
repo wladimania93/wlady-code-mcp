@@ -5,6 +5,7 @@ import { impactTools, impactHandlers } from './impact.js';
 import { analysisTools, analysisHandlers } from './analysis.js';
 import { architectureTools, architectureHandlers } from './architecture.js';
 import { adrTools, adrHandlers } from './adr.js';
+import { tracingTools, tracingHandlers } from './tracing.js';
 
 export interface ToolDefinition {
   name: string;
@@ -29,6 +30,7 @@ export const allTools: ToolDefinition[] = [
   ...analysisTools,
   ...architectureTools,
   ...adrTools,
+  ...tracingTools,
 ];
 
 const allHandlers: ToolHandler = {
@@ -39,6 +41,7 @@ const allHandlers: ToolHandler = {
   ...analysisHandlers,
   ...architectureHandlers,
   ...adrHandlers,
+  ...tracingHandlers,
 };
 
 export async function handleTool(
