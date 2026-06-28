@@ -881,7 +881,7 @@ var LANG_MAP={
   unknown:'plain'
 };
 
-function prismLang(lang){return LANG_MAP[(lang||'').toLowerCase()]||'plain';}
+function prismLang(lang){return LANG_MAP[(lang||'').toLowerCase()]||'';}
 
 async function openCodePanel(n){
   cpanel.style.display='flex';
@@ -905,8 +905,8 @@ async function openCodePanel(n){
 
     var lang=prismLang(n.language);
     codeEl.textContent=data.content;
-    codeEl.className='language-'+lang;
-    if(typeof Prism!=='undefined'&&Prism.languages[lang])Prism.highlightElement(codeEl);
+    codeEl.className=lang?'language-'+lang:'';
+    if(typeof Prism!=='undefined'&&lang&&Prism.languages[lang])Prism.highlightElement(codeEl);
   }catch(err){
     codeEl.textContent='Error: '+err.message;
     codeEl.className='';
