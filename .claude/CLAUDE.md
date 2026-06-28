@@ -86,6 +86,28 @@ Flag any new god files, dead code, or circular dependencies introduced by the ch
 
 All `relative_path` values stored in the DB use forward slashes (`/`) regardless of OS. The indexer normalizes them with `.replace(/\\/g, '/')` at write time. Never store or compare paths with backslashes.
 
+## After any code change — always re-index
+
+After editing, creating, or deleting any file in this project, re-index immediately so the MCP graph stays in sync with the actual code:
+
+```
+index_repository(
+  project_path: "<absolute path to this directory>",
+  project_id: "wlady-code-mcp",
+  project_name: "WLADY_CODE MCP"
+)
+```
+
+This is non-negotiable. An outdated index means `fn_impact`, `context`, `path`, and every other tool returns stale data. Re-index even for small changes — the indexer runs incrementally and only re-processes modified files.
+
+You can also detect which files changed without re-indexing:
+
+```
+detect_changes(project_id: "wlady-code-mcp")
+```
+
+Use this to confirm what drifted before running the full index.
+
 ## Build
 
 ```bash
