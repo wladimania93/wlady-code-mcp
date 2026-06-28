@@ -906,7 +906,7 @@ async function openCodePanel(n){
     var lang=prismLang(n.language);
     codeEl.textContent=data.content;
     codeEl.className='language-'+lang;
-    if(typeof Prism!=='undefined')Prism.highlightElement(codeEl);
+    if(typeof Prism!=='undefined'&&Prism.languages[lang])Prism.highlightElement(codeEl);
   }catch(err){
     codeEl.textContent='Error: '+err.message;
     codeEl.className='';
