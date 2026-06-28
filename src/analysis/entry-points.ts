@@ -1,6 +1,13 @@
 import type { WladyDatabase } from '../db/database.js';
 import type { Symbol } from '../types.js';
 
+// Control-flow keywords that the regex parser can incorrectly emit as symbols
+const STOP_WORDS = new Set([
+  'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'return', 'break',
+  'continue', 'try', 'catch', 'finally', 'new', 'delete', 'typeof', 'void',
+  'throw', 'yield', 'await', 'super', 'this', 'in', 'of', 'from', 'as',
+]);
+
 // Name patterns that strongly suggest an entry point
 const ENTRY_NAME_PATTERNS = [
   /^main$/i,
@@ -56,7 +63,7 @@ export function detectEntryPoints(
   const results: EntryPoint[] = [];
 
   function add(sym: Symbol, reason: string) {
-    if (!seen.has(sym.id) && results.length < limit) {
+    if (!seen.has(sym.id) && results.length < limit && !STOP_WORDS.has(sym.name)) {
       seen.add(sym.id);
       results.push({ symbol: sym, reason });
     }
