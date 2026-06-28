@@ -246,6 +246,45 @@ export class WladyDatabase {
     `).all(query, projectId, limit) as Symbol[];
   }
 
+  // ---- Embeddings ----
+
+  upsertEmbedding(symbolId: number, projectId: string, vector: Float32Array): void {
+    const buf = Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
+    this.db.prepare(`
+      INSERT INTO embeddings (symbol_id, project_id, vector)
+      VALUES (?, ?, ?)
+      ON CONFLICT(symbol_id) DO UPDATE SET vector = excluded.vector
+    `).run(symbolId, projectId, buf);
+  }
+
+  getEmbeddingsByProject(projectId: string): { symbol_id: number; vector: Float32Array }[] {
+    const rows = this.db.prepare(
+      'SELECT symbol_id, vector FROM embeddings WHERE project_id = ?'
+    ).all(projectId) as { symbol_id: number; vector: Buffer }[];
+    return rows.map(r => ({
+      symbol_id: r.symbol_id,
+      vector: new Float32Array(r.vector.buffer, r.vector.byteOffset, r.vector.byteLength / 4),
+    }));
+  }
+
+  hasEmbeddings(projectId: string): boolean {
+    const row = this.db.prepare(
+      'SELECT COUNT(*) as c FROM embeddings WHERE project_id = ? LIMIT 1'
+    ).get(projectId) as { c: number };
+    return row.c > 0;
+  }
+
+  getSymbolIdsWithEmbeddings(projectId: string): Set<number> {
+    const rows = this.db.prepare(
+      'SELECT symbol_id FROM embeddings WHERE project_id = ?'
+    ).all(projectId) as { symbol_id: number }[];
+    return new Set(rows.map(r => r.symbol_id));
+  }
+
+  deleteEmbeddingsByProject(projectId: string): void {
+    this.db.prepare('DELETE FROM embeddings WHERE project_id = ?').run(projectId);
+  }
+
   // ---- Co-change ----
 
   getCochangePairs(projectId: string, limit: number = 50): { file1: FileRecord; file2: FileRecord; count: number }[] {

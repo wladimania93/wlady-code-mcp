@@ -1,5 +1,6 @@
 import { getDatabase } from '../db/database.js';
 import { SearchEngine } from '../search/bm25.js';
+import { hybridSearch } from '../search/hybrid.js';
 import type { ToolDefinition, ToolHandler } from './index.js';
 import type { Symbol } from '../types.js';
 
@@ -24,7 +25,7 @@ export const searchTools: ToolDefinition[] = [
   },
   {
     name: 'search_graph',
-    description: 'Semantic search over the symbol graph using BM25 full-text search. Supports multi-query with semicolons.',
+    description: 'Search over the symbol graph. BM25 by default; pass semantic:true for hybrid BM25+vector search (requires embeddings to be generated during index_repository).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -36,6 +37,11 @@ export const searchTools: ToolDefinition[] = [
           description: 'Filter by symbol kinds: function, class, method, interface, variable, type, enum',
         },
         limit: { type: 'number', description: 'Maximum results (default 20)', default: 20 },
+        semantic: {
+          type: 'boolean',
+          description: 'Use hybrid BM25+vector search with RRF fusion. Only effective if embeddings were generated.',
+          default: false,
+        },
       },
       required: ['project_id', 'query'],
     },
@@ -97,15 +103,22 @@ export const searchHandlers: ToolHandler = {
     const query = args['query'] as string;
     const kinds = args['kinds'] as string[] | undefined;
     const limit = (args['limit'] as number) ?? 20;
+    const semantic = (args['semantic'] as boolean) ?? false;
 
-    const engine = new SearchEngine(db);
-    const results = engine.search(query, projectId, { limit, kinds });
+    let results: Symbol[];
+    if (semantic) {
+      results = await hybridSearch(query, projectId, db, { limit, kinds });
+    } else {
+      const engine = new SearchEngine(db);
+      results = engine.search(query, projectId, { limit, kinds });
+    }
 
     if (results.length === 0) {
       return { content: [{ type: 'text', text: `No symbols found matching: ${query}` }] };
     }
 
-    const lines = [`Symbol search results for "${query}" (${results.length} found):`, ''];
+    const mode = semantic ? 'hybrid BM25+vector' : 'BM25';
+    const lines = [`Symbol search results for "${query}" [${mode}] (${results.length} found):`, ''];
     for (const s of results) {
       lines.push(formatSymbol(s));
     }
