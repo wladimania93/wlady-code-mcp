@@ -36,6 +36,10 @@ function loadGrammar(langKey: string): unknown | null {
       case 'cpp':        g = _require('tree-sitter-cpp'); break;
       case 'php':        g = (_require('tree-sitter-php') as { php_only: unknown }).php_only; break;
       case 'ruby':       g = _require('tree-sitter-ruby'); break;
+      case 'c':          g = _require('tree-sitter-c'); break;
+      case 'bash':       g = _require('tree-sitter-bash'); break;
+      case 'scala':      g = _require('tree-sitter-scala'); break;
+      case 'haskell':    g = _require('tree-sitter-haskell'); break;
       default: return null;
     }
     grammarCache.set(langKey, g);
@@ -59,6 +63,10 @@ const EXT_TO_LANG: Record<string, string> = {
   '.hpp': 'cpp', '.hxx': 'cpp', '.h++': 'cpp',
   '.php': 'php', '.phtml': 'php',
   '.rb': 'ruby', '.rake': 'ruby',
+  '.c': 'c', '.h': 'c',
+  '.sh': 'bash', '.bash': 'bash', '.zsh': 'bash',
+  '.scala': 'scala', '.sc': 'scala',
+  '.hs': 'haskell', '.lhs': 'haskell',
 };
 
 function getLangKey(filePath: string): string | null {
@@ -826,6 +834,220 @@ function walkRuby(
   }
 }
 
+// ─── C ───────────────────────────────────────────────────────────────────────
+
+function walkC(node: SNode, ext: Extraction, content: string, scope: string | null): void {
+  const t: string = node.type;
+
+  if (t === 'function_definition') {
+    const declarator: SNode | null = node.childForFieldName('declarator');
+    if (declarator) {
+      const fnDecl: SNode =
+        declarator.type === 'pointer_declarator'
+          ? (declarator.namedChildren as SNode[])[0]
+          : declarator;
+      const name: string | undefined =
+        fnDecl?.type === 'function_declarator'
+          ? (fnDecl.childForFieldName('declarator')?.text as string | undefined)
+          : (fnDecl?.text as string | undefined);
+      if (name) {
+        ext.symbols.push(makeSymbol(name, 'function', node, content));
+        const body: SNode | null = node.childForFieldName('body');
+        if (body) walkC(body, ext, content, name);
+      }
+    }
+    return;
+  }
+
+  if (t === 'struct_specifier') {
+    const name = nameFromField(node, 'name');
+    if (name && node.childForFieldName('body')) {
+      ext.symbols.push(makeSymbol(name, 'class', node, content));
+    }
+    return;
+  }
+
+  if (t === 'type_definition') {
+    const last: SNode | undefined = (node.namedChildren as SNode[]).at(-1);
+    if (last?.type === 'type_identifier') {
+      ext.symbols.push(makeSymbol(last.text as string, 'type', node, content));
+    }
+    return;
+  }
+
+  if (t === 'preproc_include') {
+    const p: SNode | null = node.childForFieldName('path') ?? (node.namedChildren as SNode[])[0];
+    if (p) ext.imports.push((p.text as string).replace(/^[<"']|[>"']$/g, ''));
+    return;
+  }
+
+  if (t === 'call_expression') {
+    const fn: SNode | null = node.childForFieldName('function');
+    if (fn) {
+      const callee: string = fn.text as string;
+      if (callee.length > 1 && /^[a-zA-Z_]/.test(callee)) {
+        ext.calls.push({ from: scope ?? '', to: callee, line: (node.startPosition.row as number) + 1 });
+      }
+    }
+    return;
+  }
+
+  for (const child of node.namedChildren as SNode[]) {
+    walkC(child, ext, content, scope);
+  }
+}
+
+// ─── Bash ─────────────────────────────────────────────────────────────────────
+
+function walkBash(node: SNode, ext: Extraction, content: string, scope: string | null): void {
+  const t: string = node.type;
+
+  if (t === 'function_definition') {
+    const name = nameFromField(node, 'name');
+    if (name) {
+      ext.symbols.push(makeSymbol(name, 'function', node, content));
+      const body: SNode | null = node.childForFieldName('body');
+      if (body) walkBash(body, ext, content, name);
+    }
+    return;
+  }
+
+  if (t === 'command') {
+    const cmd: SNode | null = node.childForFieldName('name');
+    if (cmd) {
+      const callee: string = cmd.text as string;
+      if (callee.length > 1 && /^[a-zA-Z_]/.test(callee)) {
+        ext.calls.push({ from: scope ?? '', to: callee, line: (node.startPosition.row as number) + 1 });
+      }
+    }
+    return;
+  }
+
+  if (t === 'source_command') {
+    const p: SNode | undefined = (node.namedChildren as SNode[])[0];
+    if (p) ext.imports.push((p.text as string).replace(/^['"]|['"]$/g, ''));
+    return;
+  }
+
+  for (const child of node.namedChildren as SNode[]) {
+    walkBash(child, ext, content, scope);
+  }
+}
+
+// ─── Scala ───────────────────────────────────────────────────────────────────
+
+function walkScala(
+  node: SNode,
+  ext: Extraction,
+  content: string,
+  scope: string | null,
+  insideClass: boolean,
+): void {
+  const t: string = node.type;
+
+  if (t === 'class_definition' || t === 'object_definition') {
+    const name = nameFromField(node, 'name');
+    if (name) {
+      ext.symbols.push(makeSymbol(name, 'class', node, content));
+      const body: SNode | null = node.childForFieldName('template_body');
+      if (body) walkScala(body, ext, content, name, true);
+    }
+    return;
+  }
+
+  if (t === 'trait_definition') {
+    const name = nameFromField(node, 'name');
+    if (name) {
+      ext.symbols.push(makeSymbol(name, 'interface', node, content));
+      const body: SNode | null = node.childForFieldName('template_body');
+      if (body) walkScala(body, ext, content, name, true);
+    }
+    return;
+  }
+
+  if (t === 'function_definition' || t === 'function_declaration') {
+    const name = nameFromField(node, 'name');
+    if (name) {
+      const params: string = (node.childForFieldName('parameters')?.text as string | undefined) ?? '';
+      ext.symbols.push(makeSymbol(name, insideClass ? 'method' : 'function', node, content, `${name}${params}`));
+      const body: SNode | null = node.childForFieldName('body');
+      if (body) walkScala(body, ext, content, name, insideClass);
+    }
+    return;
+  }
+
+  if (t === 'import_declaration') {
+    const p: SNode | undefined = (node.namedChildren as SNode[])[0];
+    if (p) ext.imports.push(p.text as string);
+    return;
+  }
+
+  if (t === 'call_expression') {
+    const fn: SNode | null = node.childForFieldName('function');
+    if (fn) {
+      const callee: string =
+        fn.type === 'field_expression'
+          ? ((fn.childForFieldName('field')?.text as string | undefined) ?? fn.text as string)
+          : (fn.text as string);
+      if (callee.length > 1 && /^[a-zA-Z_]/.test(callee)) {
+        ext.calls.push({ from: scope ?? '', to: callee, line: (node.startPosition.row as number) + 1 });
+      }
+    }
+    return;
+  }
+
+  for (const child of node.namedChildren as SNode[]) {
+    walkScala(child, ext, content, scope, insideClass);
+  }
+}
+
+// ─── Haskell ─────────────────────────────────────────────────────────────────
+
+function walkHaskell(node: SNode, ext: Extraction, content: string): void {
+  const t: string = node.type;
+
+  if (t === 'signature') {
+    const nameNode: SNode | undefined = (node.namedChildren as SNode[]).find(
+      (c: SNode) => c.type === 'variable' || c.type === 'operator',
+    );
+    if (nameNode) ext.symbols.push(makeSymbol(nameNode.text as string, 'function', node, content));
+    return;
+  }
+
+  if (t === 'data_type' || t === 'newtype') {
+    const name = nameFromField(node, 'name');
+    if (name) ext.symbols.push(makeSymbol(name, 'type', node, content));
+    return;
+  }
+
+  if (t === 'type_synonym') {
+    const name = nameFromField(node, 'name');
+    if (name) ext.symbols.push(makeSymbol(name, 'type', node, content));
+    return;
+  }
+
+  if (t === 'class_declaration') {
+    const head: SNode | undefined = (node.namedChildren as SNode[]).find(
+      (c: SNode) => c.type === 'class_head',
+    );
+    const nameNode: SNode | undefined = head
+      ? (head.namedChildren as SNode[]).find((c: SNode) => c.type === 'class')
+      : undefined;
+    if (nameNode) ext.symbols.push(makeSymbol(nameNode.text as string, 'interface', node, content));
+    return;
+  }
+
+  if (t === 'import') {
+    const mod: SNode | null = node.childForFieldName('module');
+    if (mod) ext.imports.push(mod.text as string);
+    return;
+  }
+
+  for (const child of node.namedChildren as SNode[]) {
+    walkHaskell(child, ext, content);
+  }
+}
+
 // ─── Dispatch ─────────────────────────────────────────────────────────────────
 
 function walkRoot(root: SNode, ext: Extraction, content: string, langKey: string): void {
@@ -875,6 +1097,26 @@ function walkRoot(root: SNode, ext: Extraction, content: string, langKey: string
     case 'ruby':
       for (const child of root.namedChildren as SNode[]) {
         walkRuby(child, ext, content, null, false);
+      }
+      break;
+    case 'c':
+      for (const child of root.namedChildren as SNode[]) {
+        walkC(child, ext, content, null);
+      }
+      break;
+    case 'bash':
+      for (const child of root.namedChildren as SNode[]) {
+        walkBash(child, ext, content, null);
+      }
+      break;
+    case 'scala':
+      for (const child of root.namedChildren as SNode[]) {
+        walkScala(child, ext, content, null, false);
+      }
+      break;
+    case 'haskell':
+      for (const child of root.namedChildren as SNode[]) {
+        walkHaskell(child, ext, content);
       }
       break;
   }

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wlady-code-mcp
+  namespace: wlady-code
+spec:
+  selector:
+    app: wlady-code-mcp
+  ports:
+    - name: galaxy-ui
+      port: 9750
+      targetPort: 9750
+  type: ClusterIP
+---
+# Optional: expose Galaxy UI outside the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: wlady-code-mcp-nodeport
+  namespace: wlady-code
+spec:
+  selector:
+    app: wlady-code-mcp
+  ports:
+    - name: galaxy-ui
+      port: 9750
+      targetPort: 9750
+      nodePort: 30750
+  type: NodePort

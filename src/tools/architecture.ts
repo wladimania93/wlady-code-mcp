@@ -1,6 +1,7 @@
 import { getDatabase } from '../db/database.js';
 import { GitIntegration } from '../git/index.js';
 import { computeMaintainability } from '../analysis/complexity.js';
+import { getFileOwners, getOwnerSummary } from '../analysis/codeowners.js';
 import type { ToolDefinition, ToolHandler } from './index.js';
 import type { Symbol, ManifestoRule } from '../types.js';
 
@@ -40,6 +41,18 @@ export const architectureTools: ToolDefinition[] = [
       type: 'object',
       properties: {
         project_id: { type: 'string', description: 'Project ID' },
+      },
+      required: ['project_id'],
+    },
+  },
+  {
+    name: 'code_owners',
+    description: 'Show CODEOWNERS information: who owns a file, all patterns, or a summary by owner. Reads .github/CODEOWNERS, CODEOWNERS, or docs/CODEOWNERS.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Project ID' },
+        rel_path:   { type: 'string', description: 'Optional: relative file path to find owners for' },
       },
       required: ['project_id'],
     },
@@ -273,6 +286,51 @@ export const architectureHandlers: ToolHandler = {
       lines.push('Overall: WARN - one or more rules exceeded warn threshold.');
     } else {
       lines.push('Overall: PASS - all rules within thresholds.');
+    }
+
+    return { content: [{ type: 'text', text: lines.join('\n') }] };
+  },
+
+  async code_owners(args: Record<string, unknown>) {
+    const db = getDatabase();
+    const projectId = args['project_id'] as string;
+    const relPath = args['rel_path'] as string | undefined;
+
+    const project = db.getProject(projectId);
+    if (!project) return { content: [{ type: 'text', text: `Project not found: ${projectId}` }] };
+
+    if (relPath) {
+      const ownership = getFileOwners(project.path, relPath);
+      if (!ownership.matchedPattern) {
+        return { content: [{ type: 'text', text: `No CODEOWNERS entry matches: ${relPath}` }] };
+      }
+      const lines = [
+        `File: ${relPath}`,
+        `Matched pattern: ${ownership.matchedPattern}`,
+        `Owners: ${ownership.owners.join(', ') || '(none)'}`,
+      ];
+      return { content: [{ type: 'text', text: lines.join('\n') }] };
+    }
+
+    const summary = getOwnerSummary(project.path);
+    if (!summary.hasCodeowners) {
+      return { content: [{ type: 'text', text: `No CODEOWNERS file found in ${project.path}` }] };
+    }
+
+    const lines = [
+      `CODEOWNERS: ${summary.location}`,
+      `Patterns: ${summary.entries.length}`,
+      '',
+      'Owners and their patterns:',
+    ];
+    for (const [owner, patterns] of Object.entries(summary.ownerMap).sort()) {
+      lines.push(`  ${owner}`);
+      for (const p of patterns) lines.push(`    ${p}`);
+    }
+    lines.push('');
+    lines.push('All entries:');
+    for (const e of summary.entries) {
+      lines.push(`  ${e.pattern.padEnd(40)} ${e.owners.join(' ') || '(no owner)'}`);
     }
 
     return { content: [{ type: 'text', text: lines.join('\n') }] };

@@ -238,6 +238,40 @@ export const LANGUAGE_CONFIGS: LanguageConfig[] = [
     singleLineComment: '#',
   },
   {
+    name: 'scala',
+    extensions: ['.scala', '.sc'],
+    symbolPatterns: [
+      { kind: 'class',     pattern: /^(?:abstract\s+|sealed\s+|final\s+|case\s+)?class\s+(\w+)/,   nameGroup: 1 },
+      { kind: 'class',     pattern: /^(?:case\s+)?object\s+(\w+)/,                                  nameGroup: 1 },
+      { kind: 'interface', pattern: /^(?:sealed\s+)?trait\s+(\w+)/,                                 nameGroup: 1 },
+      { kind: 'function',  pattern: /^\s*def\s+(\w+)\s*(\([^)]*\)(?:\s*:\s*\S+)?)/,                 nameGroup: 1, signatureGroup: 2 },
+      { kind: 'type',      pattern: /^\s*type\s+(\w+)/,                                              nameGroup: 1 },
+    ],
+    importPatterns: [
+      /^import\s+([\w.]+(?:\._|\.\{[^}]+\})?)/,
+    ],
+    callPatterns: [/(\w+)\s*\(/g],
+    singleLineComment: '//',
+    blockCommentStart: '/*',
+    blockCommentEnd: '*/',
+  },
+  {
+    name: 'haskell',
+    extensions: ['.hs', '.lhs'],
+    symbolPatterns: [
+      { kind: 'function', pattern: /^(\w+)\s*::\s*.+/, nameGroup: 1 },
+      { kind: 'type',     pattern: /^(?:data|newtype|type)\s+(\w+)/, nameGroup: 1 },
+      { kind: 'interface', pattern: /^class\s+.*\s+(\w+)\s+\w+\s+where/, nameGroup: 1 },
+    ],
+    importPatterns: [
+      /^import\s+(?:qualified\s+)?([\w.]+)/,
+    ],
+    callPatterns: [/(\w+)\s*\(/g],
+    singleLineComment: '--',
+    blockCommentStart: '{-',
+    blockCommentEnd: '-}',
+  },
+  {
     name: 'generic',
     extensions: [],
     symbolPatterns: [
@@ -299,4 +333,6 @@ export const INDEXABLE_EXTENSIONS = new Set([
   '.md', '.txt', '.rst',
   '.sh', '.bash', '.zsh', '.fish',
   '.sql',
+  '.scala', '.sc',
+  '.hs', '.lhs',
 ]);

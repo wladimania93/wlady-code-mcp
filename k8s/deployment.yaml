@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wlady-code-mcp
+  namespace: wlady-code
+  labels:
+    app: wlady-code-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wlady-code-mcp
+  template:
+    metadata:
+      labels:
+        app: wlady-code-mcp
+    spec:
+      containers:
+        - name: wlady-code-mcp
+          image: wlady-code-mcp:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9750
+              name: galaxy-ui
+          envFrom:
+            - configMapRef:
+                name: wlady-code-config
+          volumeMounts:
+            - name: wlady-db
+              mountPath: /root/.wlady-code-mcp
+            - name: workspace
+              mountPath: /workspace
+              readOnly: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      volumes:
+        - name: wlady-db
+          persistentVolumeClaim:
+            claimName: wlady-db
+        - name: workspace
+          hostPath:
+            path: /workspace   # override with your repo path
+            type: DirectoryOrCreate
