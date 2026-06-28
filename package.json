@@ -5,6 +5,9 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": { "wlady-code": "dist/index.js" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",

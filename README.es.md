@@ -183,6 +183,18 @@ El panel de código usa **Prism.js** con gramáticas específicas para 18+ lengu
 - **Node.js 18+**
 - Claude Desktop, Cursor u otro cliente MCP compatible
 
+**Solo Linux** — `better-sqlite3` compila bindings nativos durante la instalación, necesitas las build tools:
+```bash
+# Debian / Ubuntu
+sudo apt install python3 make g++
+
+# Fedora / RHEL
+sudo dnf install python3 make gcc-c++
+
+# Arch
+sudo pacman -S python make gcc
+```
+
 ### Compilar
 
 ```bash
