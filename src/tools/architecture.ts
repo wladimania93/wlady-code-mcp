@@ -20,16 +20,21 @@ export const architectureTools: ToolDefinition[] = [
   },
   {
     name: 'manifesto',
-    description: 'Manage project quality manifesto rules (thresholds for complexity, dead code, etc.).',
+    description: 'Manage project quality manifesto rules (thresholds for complexity, dead code, architecture boundaries).',
     inputSchema: {
       type: 'object',
       properties: {
-        project_id: { type: 'string', description: 'Project ID' },
-        action: { type: 'string', enum: ['list', 'add', 'remove'], description: 'Action to perform', default: 'list' },
-        rule_name: { type: 'string', description: 'Rule name (for add/remove)' },
-        metric: { type: 'string', description: 'Metric name: max_cyclomatic, max_cognitive, max_file_symbols, max_dead_ratio' },
+        project_id:     { type: 'string', description: 'Project ID' },
+        action:         { type: 'string', enum: ['list', 'add', 'remove'], description: 'Action to perform', default: 'list' },
+        rule_name:      { type: 'string', description: 'Rule name (for add/remove)' },
+        metric: {
+          type: 'string',
+          description: 'Metric: max_cyclomatic | max_cognitive | max_file_symbols | dead_symbol_count | total_symbols | avg_cyclomatic | no_circular_deps | max_fanin | max_fanout | no_dep (layer boundary — requires from_path + to_path)',
+        },
         warn_threshold: { type: 'number', description: 'Warning threshold value' },
         fail_threshold: { type: 'number', description: 'Failure threshold value' },
+        from_path:      { type: 'string', description: 'For no_dep rules: source directory prefix (e.g. src/controllers)' },
+        to_path:        { type: 'string', description: 'For no_dep rules: target directory prefix that must not be imported (e.g. src/repositories)' },
       },
       required: ['project_id', 'action'],
     },
@@ -179,17 +184,30 @@ export const architectureHandlers: ToolHandler = {
 
     if (action === 'add') {
       const ruleName = args['rule_name'] as string;
-      const metric = args['metric'] as string;
+      let metric = args['metric'] as string;
       if (!ruleName || !metric) {
         return { content: [{ type: 'text', text: 'Error: rule_name and metric are required for action=add' }] };
+      }
+
+      let failThreshold = args['fail_threshold'] as number | undefined;
+      const warnThreshold = args['warn_threshold'] as number | undefined;
+
+      if (metric === 'no_dep') {
+        const fromPath = args['from_path'] as string | undefined;
+        const toPath = args['to_path'] as string | undefined;
+        if (!fromPath || !toPath) {
+          return { content: [{ type: 'text', text: 'Error: from_path and to_path are required for metric=no_dep' }] };
+        }
+        metric = `no_dep:${fromPath.replace(/\\/g, '/')}:${toPath.replace(/\\/g, '/')}`;
+        if (failThreshold === undefined) failThreshold = 1;
       }
 
       db.upsertManifestoRule({
         project_id: projectId,
         rule_name: ruleName,
         metric,
-        warn_threshold: args['warn_threshold'] as number | undefined,
-        fail_threshold: args['fail_threshold'] as number | undefined,
+        warn_threshold: warnThreshold,
+        fail_threshold: failThreshold,
       });
 
       return { content: [{ type: 'text', text: `Manifesto rule added: ${ruleName} (${metric})` }] };
@@ -257,9 +275,71 @@ export const architectureHandlers: ToolHandler = {
           currentValue = r?.v ?? 0;
           break;
         }
-        default:
-          lines.push(`  SKIP  ${rule.rule_name}: Unknown metric "${rule.metric}"`);
-          continue;
+        case 'no_circular_deps': {
+          const edgeRows = raw.prepare(`
+            SELECT DISTINCT from_file_id as f, to_file_id as t
+            FROM edges WHERE project_id = ? AND to_file_id IS NOT NULL AND from_file_id != to_file_id
+          `).all(projectId) as { f: number; t: number }[];
+          const graph = new Map<number, number[]>();
+          for (const e of edgeRows) {
+            if (!graph.has(e.f)) graph.set(e.f, []);
+            graph.get(e.f)!.push(e.t);
+          }
+          const visited = new Set<number>();
+          const inStack = new Set<number>();
+          let cycles = 0;
+          const dfs = (n: number) => {
+            visited.add(n); inStack.add(n);
+            for (const nb of graph.get(n) ?? []) {
+              if (!visited.has(nb)) dfs(nb);
+              else if (inStack.has(nb)) cycles++;
+            }
+            inStack.delete(n);
+          };
+          for (const n of graph.keys()) { if (!visited.has(n)) dfs(n); }
+          currentValue = cycles;
+          break;
+        }
+        case 'max_fanin': {
+          const r = raw.prepare(`
+            SELECT MAX(cnt) as v FROM (
+              SELECT COUNT(DISTINCT from_file_id) as cnt FROM edges
+              WHERE project_id = ? AND to_file_id IS NOT NULL AND from_file_id != to_file_id
+              GROUP BY to_file_id)
+          `).get(projectId) as { v: number };
+          currentValue = r?.v ?? 0;
+          break;
+        }
+        case 'max_fanout': {
+          const r = raw.prepare(`
+            SELECT MAX(cnt) as v FROM (
+              SELECT COUNT(DISTINCT to_file_id) as cnt FROM edges
+              WHERE project_id = ? AND to_file_id IS NOT NULL AND from_file_id != to_file_id
+              GROUP BY from_file_id)
+          `).get(projectId) as { v: number };
+          currentValue = r?.v ?? 0;
+          break;
+        }
+        default: {
+          if (rule.metric.startsWith('no_dep:')) {
+            const parts = rule.metric.split(':');
+            const fromPath = (parts[1] ?? '').replace(/\/$/, '');
+            const toPath   = (parts[2] ?? '').replace(/\/$/, '');
+            const r = raw.prepare(`
+              SELECT COUNT(*) as v FROM edges e
+              JOIN files f1 ON e.from_file_id = f1.id
+              JOIN files f2 ON e.to_file_id   = f2.id
+              WHERE e.project_id = ?
+                AND (f1.relative_path = ? OR f1.relative_path LIKE ?)
+                AND (f2.relative_path = ? OR f2.relative_path LIKE ?)
+                AND f1.id != f2.id
+            `).get(projectId, fromPath, fromPath + '/%', toPath, toPath + '/%') as { v: number };
+            currentValue = r?.v ?? 0;
+          } else {
+            lines.push(`  SKIP  ${rule.rule_name}: Unknown metric "${rule.metric}"`);
+            continue;
+          }
+        }
       }
 
       let status = 'PASS';
