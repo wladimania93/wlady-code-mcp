@@ -284,7 +284,32 @@ sudo pacman -S python make gcc
 xcode-select --install
 ```
 
-### Build
+### Quick Start — npx (recommended)
+
+No clone or build step required. Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "wlady-code": {
+      "command": "npx",
+      "args": ["-y", "wlady-code-mcp"]
+    }
+  }
+}
+```
+
+Or via the Claude Code CLI:
+
+```bash
+claude mcp add wlady-code -s user -- npx -y wlady-code-mcp
+```
+
+`npx` downloads and runs the latest published version automatically. No path configuration needed.
+
+### Build from Source
+
+Only needed if you want to contribute or run a local development build:
 
 ```bash
 git clone https://github.com/wladimania93/wlady-code-mcp
@@ -293,7 +318,7 @@ npm install --legacy-peer-deps   # required for tree-sitter grammar compatibilit
 npm run build
 ```
 
-### Register with Claude Desktop
+Then register the local build:
 
 ```bash
 claude mcp add wlady-code -s user -- node "/absolute/path/to/wlady-code-mcp/dist/index.js"
