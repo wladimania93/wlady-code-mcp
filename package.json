@@ -1,0 +1,27 @@
+{
+  "name": "wlady-code-mcp",
+  "version": "0.1.0",
+  "description": "WLADY_CODE - Advanced codebase intelligence MCP combining codebase-memory-mcp + ops-codegraph-tool",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": { "wlady-code": "dist/index.js" },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "better-sqlite3": "^9.4.3",
+    "chokidar": "^3.6.0",
+    "glob": "^10.3.10",
+    "ignore": "^5.3.1",
+    "simple-git": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
