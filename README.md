@@ -286,7 +286,7 @@ WLADY_CODE was built by combining the best of two excellent projects:
 
 The **visual philosophy**: represent a codebase as a galaxy where file importance maps to stellar spectral type, and dependency density creates glowing nebulae via additive color blending. The O/B/A/F/G/K/M spectral color system and the 3D graph architecture are directly inspired by their React + Three.js + Bloom implementation. Our version reimplements it with native Canvas 2D — eliminating build dependencies and serving a fully self-contained UI from the MCP process itself.
 
-### [ops-codegraph-tool](https://github.com/wladimania93/ops-codegraph-tool)
+### [ops-codegraph-tool](https://github.com/optave/ops-codegraph-tool)
 
 The **analysis philosophy**: treat a codebase as a queryable knowledge graph, with specialized tools for navigation (where is X, what calls Y), impact analysis (if I change Z, what breaks), and quality auditing (dead code, complexity, circular dependencies). The modular handler structure by category and the real-time git integration are directly influenced by this project.
 
