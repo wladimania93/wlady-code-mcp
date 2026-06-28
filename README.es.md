@@ -379,6 +379,58 @@ La primera ejecución descarga el modelo `snowflake-arctic-embed-xs` (~90 MB) en
 
 ---
 
+## Solución de problemas
+
+### Node.js 24 — error de compilación (tree-sitter)
+
+**Síntoma:** `MSBuild exited with code 1` / `node-gyp rebuild failed` con `#error "C++20 or later required."` en Windows.
+
+**Causa:** Algunos paquetes de gramáticas de tree-sitter (`tree-sitter-cpp`, `tree-sitter-java`, `tree-sitter-ruby`, etc.) incluyen archivos `.gyp` que fuerzan `/std:c++17`, lo cual entra en conflicto con el requisito de C++20 introducido en Node.js 24 (V8).
+
+**Solución:** Usa **Node.js 22 LTS** hasta que los paquetes de gramáticas sean actualizados por sus mantenedores.
+
+```bash
+# con nvm (recomendado)
+nvm install 22
+nvm use 22
+
+# verificar
+node -v   # debe mostrar v22.x.x
+```
+
+Node 24 está explícitamente bloqueado en `engines` (`<24.0.0`) para que `npx` y `npm` adviertan si la versión no es compatible.
+
+---
+
+### Conflictos de peer dependencies (ERESOLVE)
+
+**Síntoma:** `npm ERR! ERESOLVE overriding peer dependency` durante la instalación.
+
+**Causa:** Algunos paquetes de gramáticas declaran requisitos de peer para versiones menores antiguas de `tree-sitter` (p.ej. `^0.21.x`). El proyecto incluye un `.npmrc` con `legacy-peer-deps=true` que resuelve esto automáticamente. Si clonas y compilas desde el código fuente, ese archivo está incluido.
+
+Si el error persiste:
+
+```bash
+npm install --legacy-peer-deps
+```
+
+---
+
+### EBUSY durante reinstalación (Windows)
+
+**Síntoma:** `npm ERR! EBUSY: resource busy or locked` en `better-sqlite3`.
+
+**Causa:** Un proceso Node.js (Claude Code, extensión de VS Code o el propio servidor MCP) mantiene abierto el archivo `.node` nativo de la DLL.
+
+**Solución:** Antes de ejecutar `npm install` o `npm update`:
+1. Cierra **VS Code** (o cualquier IDE con la extensión MCP cargada)
+2. Cierra **Claude Desktop / Claude Code**
+3. Mata cualquier proceso `node` que pueda tener el MCP cargado
+
+Luego vuelve a intentar la instalación.
+
+---
+
 ## Estructura del proyecto
 
 ```

@@ -379,6 +379,58 @@ The first run downloads the `snowflake-arctic-embed-xs` model (~90 MB) into `~/.
 
 ---
 
+## Troubleshooting
+
+### Node.js 24 — compilation error (tree-sitter)
+
+**Symptom:** `MSBuild exited with code 1` / `node-gyp rebuild failed` with `#error "C++20 or later required."` on Windows.
+
+**Cause:** Some tree-sitter grammar packages (`tree-sitter-cpp`, `tree-sitter-java`, `tree-sitter-ruby`, etc.) ship `.gyp` build files that force `/std:c++17`, which conflicts with the C++20 requirement introduced in Node.js 24 (V8).
+
+**Fix:** Use **Node.js 22 LTS** until the upstream grammar packages are updated.
+
+```bash
+# with nvm (recommended)
+nvm install 22
+nvm use 22
+
+# verify
+node -v   # should print v22.x.x
+```
+
+Node 24 is explicitly blocked in `engines` (`<24.0.0`) so `npx` and `npm` will warn you if your version is unsupported.
+
+---
+
+### Peer dependency conflicts (ERESOLVE)
+
+**Symptom:** `npm ERR! ERESOLVE overriding peer dependency` during install.
+
+**Cause:** Some grammar packages declare peer requirements for older `tree-sitter` minor versions (e.g. `^0.21.x`). The project ships a `.npmrc` with `legacy-peer-deps=true` to resolve this automatically. If you are cloning and building from source, this file is included.
+
+If you hit the error anyway:
+
+```bash
+npm install --legacy-peer-deps
+```
+
+---
+
+### EBUSY during reinstallation (Windows)
+
+**Symptom:** `npm ERR! EBUSY: resource busy or locked` on `better-sqlite3`.
+
+**Cause:** A Node.js process (Claude Code, VS Code extension, or the MCP server itself) still holds the native `.node` DLL open.
+
+**Fix:** Before running `npm install` or `npm update`:
+1. Close **VS Code** (or any IDE with the MCP extension loaded)
+2. Close **Claude Desktop / Claude Code**
+3. Kill any running `node` process that may have loaded the MCP
+
+Then retry the install.
+
+---
+
 ## Project Structure
 
 ```
