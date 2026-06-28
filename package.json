@@ -1,6 +1,6 @@
 {
   "name": "wlady-code-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Advanced codebase intelligence MCP — 27 tools, tree-sitter AST parser, semantic embeddings + hybrid BM25+vector search, execution flow tracing, galaxy visualization",
   "type": "module",
   "main": "dist/index.js",
