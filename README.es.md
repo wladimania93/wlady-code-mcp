@@ -4,7 +4,7 @@
 
 **Inteligencia avanzada de codebases para asistentes de IA**
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](package.json)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)](package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=node.js)](https://nodejs.org)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple?style=flat-square)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
@@ -77,6 +77,14 @@ La interfaz web integrada usa un **sistema de colores espectrales estelares** �
 
 Las aristas usan **mezcla aditiva en Canvas 2D** (`globalCompositeOperation: 'lighter'`), haciendo que los clusters de dependencias densas brillen más — el mismo efecto que `AdditiveBlending` de Three.js. Donde convergen muchos imports, aparece una nebulosa.
 
+**Panel lateral — 3 pestañas:**
+
+| Pestaña | Contenido |
+|---|---|
+| **Archivos** | Árbol de archivos colapsable con búsqueda en tiempo real. Haz clic en un archivo para volar a su nodo. Debajo del árbol, la sección **Símbolos** muestra todas las funciones y clases del archivo seleccionado con sus números de línea. |
+| **Filtros** | Chips por lenguaje para mostrar/atenuar nodos. Filtro de profundidad de salto (1 / 2 / 3) para enfocar el grafo en el entorno del nodo seleccionado usando BFS con caché. |
+| **Módulos** | Lista de comunidades, archivos hotspot (mayor fan-in) y **puntos de entrada** detectados automáticamente (funciones main, controladores, routers, archivos index). |
+
 **Controles:**
 
 | Acción | Efecto |
@@ -85,11 +93,12 @@ Las aristas usan **mezcla aditiva en Canvas 2D** (`globalCompositeOperation: 'li
 | Rueda del ratón | Zoom |
 | Clic en nodo | Seleccionar + resaltar conexiones directas |
 | Doble clic en nodo | Abrir código fuente con syntax highlighting |
+| Clic en símbolo del panel | Ir a esa función/clase en el panel de código |
 | Clic en comunidad | Resaltar todos los archivos de ese módulo |
 | Doble clic en vacío | Reanudar auto-rotación |
 | `Esc` | Cerrar panel de código |
 
-El panel de código usa **Prism.js** con gramáticas específicas para 18+ lenguajes, e incluye un botón **"Abrir en VS Code"** via el protocolo `vscode://file/`.
+El panel de código muestra **números de línea**, resalta el rango exacto del símbolo seleccionado, hace scroll automático a él y usa **Prism.js** con gramáticas para 18+ lenguajes. Incluye un botón **"Abrir en VS Code"** via el protocolo `vscode://file/`.
 
 ### Parser AST — Tree-sitter
 
@@ -443,8 +452,31 @@ La **filosofía de precisión**: parse a nivel AST con Tree-sitter para extracci
 
 ---
 
+## Changelog
+
+### v0.3.0
+- **Galaxy UI — renovación mayor del panel** inspirada en GitNexus:
+  - Panel lateral con 3 pestañas: Archivos, Filtros, Módulos
+  - Árbol de archivos colapsable con búsqueda en tiempo real
+  - Lista de símbolos por archivo (funciones/clases con número de línea)
+  - Chips de filtro por lenguaje (atenuar nodos por lenguaje)
+  - Filtro BFS de profundidad (1/2/3 saltos desde el nodo seleccionado, con caché)
+  - Pestaña Módulos: comunidades, archivos hotspot, puntos de entrada detectados automáticamente
+  - Barra de estado con nombre del proyecto, conteo de nodos y aristas
+- **Panel de código**: números de línea, rango del símbolo resaltado, scroll automático, color de texto corregido para fondo oscuro
+- Nuevos endpoints API: `/api/symbols`, `/api/entry-points`
+
+### v0.2.0
+- Parser AST Tree-sitter para 11 lenguajes
+- Embeddings semánticos + búsqueda híbrida BM25/vector (RRF)
+- Trazado de flujo de ejecución (`execution_flow`, `list_entry_points`)
+- Soporte Docker
+- 27 herramientas MCP
+
+---
+
 <div align="center">
 
-*WLADY_CODE v0.2.0 · Construido con Node.js · Potenciado por MCP*
+*WLADY_CODE v0.3.0 · Construido con Node.js · Potenciado por MCP*
 
 </div>

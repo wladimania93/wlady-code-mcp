@@ -4,7 +4,7 @@
 
 **Advanced codebase intelligence for AI assistants**
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](package.json)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)](package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=node.js)](https://nodejs.org)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple?style=flat-square)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
@@ -77,6 +77,14 @@ The built-in web UI uses a **stellar spectral color system** — files are color
 
 Edges use **Canvas 2D additive blending** (`globalCompositeOperation: 'lighter'`), making dense dependency clusters glow brighter — the same effect as Three.js `AdditiveBlending`. Where many imports converge, a nebula appears.
 
+**Side panel — 3 tabs:**
+
+| Tab | Contents |
+|---|---|
+| **Files** | Collapsible file tree with live search. Click any file to fly to its node. Below the tree, a **Symbols** section shows all functions and classes in the selected file with their line numbers. |
+| **Filters** | Language chips to show/dim nodes by language. Hop-depth filter (1 / 2 / 3) to focus the graph on the neighbourhood of the selected node using BFS with caching. |
+| **Modules** | Community list, hotspot files (highest fan-in), and auto-detected **entry points** (main functions, controllers, routers, index files). |
+
 **Controls:**
 
 | Action | Effect |
@@ -85,11 +93,12 @@ Edges use **Canvas 2D additive blending** (`globalCompositeOperation: 'lighter'`
 | Scroll wheel | Zoom |
 | Click node | Select + highlight its direct connections |
 | Double-click node | Open source code with syntax highlighting |
+| Click symbol in panel | Jump to that function/class in the code panel |
 | Click community | Highlight all files in that module |
 | Double-click empty space | Resume auto-rotation |
 | `Esc` | Close code panel |
 
-The code panel uses **Prism.js** with explicit grammar loading for 18+ languages, and includes an **"Open in VS Code"** button via the `vscode://file/` protocol.
+The code panel displays **line numbers**, highlights the exact line range of the selected symbol, auto-scrolls to it, and uses **Prism.js** syntax highlighting with explicit grammar loading for 18+ languages. Includes an **"Open in VS Code"** button via the `vscode://file/` protocol.
 
 ### AST Parser — Tree-sitter
 
@@ -443,8 +452,31 @@ The **precision philosophy**: AST-level parsing with Tree-sitter for accurate sy
 
 ---
 
+## Changelog
+
+### v0.3.0
+- **Galaxy UI — major panel overhaul** inspired by GitNexus:
+  - Left panel with 3 tabs: Files, Filters, Modules
+  - Collapsible file tree with live search
+  - Symbol list per file (functions/classes with line numbers)
+  - Language filter chips (toggle dimming by language)
+  - Hop-depth BFS filter (1/2/3 hops from selected node, cached)
+  - Modules tab: communities, hotspot files, auto-detected entry points
+  - Status bar showing project name, node count, edge count
+- **Code panel**: line numbers, highlighted symbol range, auto-scroll, fixed text color on dark background
+- New API endpoints: `/api/symbols`, `/api/entry-points`
+
+### v0.2.0
+- Tree-sitter AST parser for 11 languages
+- Semantic embeddings + hybrid BM25/vector search (RRF)
+- Execution flow tracing (`execution_flow`, `list_entry_points`)
+- Docker support
+- 27 MCP tools
+
+---
+
 <div align="center">
 
-*WLADY_CODE v0.2.0 · Built with Node.js · Powered by MCP*
+*WLADY_CODE v0.3.0 · Built with Node.js · Powered by MCP*
 
 </div>
