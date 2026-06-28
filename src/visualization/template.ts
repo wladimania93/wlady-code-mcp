@@ -906,7 +906,9 @@ async function openCodePanel(n){
     var lang=prismLang(n.language);
     codeEl.textContent=data.content;
     codeEl.className=lang?'language-'+lang:'';
-    if(typeof Prism!=='undefined'&&lang&&Prism.languages[lang])Prism.highlightElement(codeEl);
+    if(typeof Prism!=='undefined'&&lang&&Prism.languages[lang]){
+      try{Prism.highlightElement(codeEl);}catch(e){/* grammar not ready, show plain text */}
+    }
   }catch(err){
     codeEl.textContent='Error: '+err.message;
     codeEl.className='';
