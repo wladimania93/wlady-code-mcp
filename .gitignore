@@ -15,8 +15,7 @@ dist/
 
 # IDE / tools
 .omc/
-.claude/settings.local.json
-.claude/*.jsonl
+.claude/
 .vscode/
 .idea/
 
