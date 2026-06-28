@@ -19,6 +19,11 @@ export const indexingTools: ToolDefinition[] = [
         path: { type: 'string', description: 'Absolute path to the repository root' },
         name: { type: 'string', description: 'Optional project name (defaults to directory name)' },
         force_rebuild: { type: 'boolean', description: 'Force a full re-index from scratch', default: false },
+        embeddings: {
+          type: 'boolean',
+          description: 'Generate semantic embeddings for symbols (enables hybrid search). Downloads ~90MB model on first run.',
+          default: false,
+        },
       },
       required: ['path'],
     },
@@ -66,8 +71,13 @@ export const indexingHandlers: ToolHandler = {
       created_at: existing?.created_at ?? Date.now(),
     });
 
+    const genEmbeddings = (args['embeddings'] as boolean) ?? false;
     const indexer = new Indexer(db);
-    const stats = await indexer.index(projectPath, projectId, forceBuild);
+    const stats = await indexer.index(projectPath, projectId, forceBuild, { embeddings: genEmbeddings });
+
+    const embLine = stats.embeddings_generated !== undefined
+      ? [`  Embeddings generated: ${stats.embeddings_generated}`]
+      : [];
 
     const text = [
       `Project indexed: ${projectName}`,
@@ -79,6 +89,7 @@ export const indexingHandlers: ToolHandler = {
       `  Files skipped: ${stats.files_skipped}`,
       `  Symbols found: ${stats.symbols_found}`,
       `  Edges found: ${stats.edges_found}`,
+      ...embLine,
       `  Duration: ${stats.duration_ms}ms`,
     ].join('\n');
 

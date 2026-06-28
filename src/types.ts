@@ -83,6 +83,7 @@ export interface IndexStats {
   symbols_found: number;
   edges_found: number;
   duration_ms: number;
+  embeddings_generated?: number;
 }
 
 export interface ManifestoRule {

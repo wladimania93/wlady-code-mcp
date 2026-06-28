@@ -4,7 +4,9 @@
   "description": "WLADY_CODE - Advanced codebase intelligence MCP combining codebase-memory-mcp + ops-codegraph-tool",
   "type": "module",
   "main": "dist/index.js",
-  "bin": { "wlady-code": "dist/index.js" },
+  "bin": {
+    "wlady-code": "dist/index.js"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
@@ -14,6 +16,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
     "better-sqlite3": "^9.4.3",
     "chokidar": "^3.6.0",

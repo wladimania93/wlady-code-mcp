@@ -117,6 +117,14 @@ CREATE VIRTUAL TABLE IF NOT EXISTS symbols_fts USING fts5(
   content_rowid='id',
   tokenize='porter unicode61'
 );
+
+CREATE TABLE IF NOT EXISTS embeddings (
+  symbol_id INTEGER PRIMARY KEY REFERENCES symbols(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  vector BLOB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_embeddings_project ON embeddings(project_id);
 `;
 
 export const FTS_TRIGGERS_SQL = [

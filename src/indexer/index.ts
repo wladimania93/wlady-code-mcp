@@ -52,7 +52,8 @@ export class Indexer {
   async index(
     projectPath: string,
     projectId: string,
-    forceRebuild: boolean = false
+    forceRebuild: boolean = false,
+    opts: { embeddings?: boolean } = {}
   ): Promise<IndexStats> {
     const start = Date.now();
     let filesProcessed = 0;
@@ -222,13 +223,56 @@ export class Indexer {
     // Update project stats
     this.db.updateProjectStats(projectId);
 
+    // Optionally generate semantic embeddings
+    let embeddingsGenerated: number | undefined;
+    if (opts.embeddings) {
+      embeddingsGenerated = await this.generateEmbeddings(projectId, forceRebuild);
+    }
+
     return {
       files_processed: filesProcessed,
       files_skipped: filesSkipped,
       symbols_found: symbolsFound,
       edges_found: edgesFound,
       duration_ms: Date.now() - start,
+      embeddings_generated: embeddingsGenerated,
     };
+  }
+
+  private async generateEmbeddings(projectId: string, force: boolean): Promise<number> {
+    try {
+      const { embedTexts } = await import('../embeddings/embedder.js');
+
+      if (force) this.db.deleteEmbeddingsByProject(projectId);
+
+      const allSymbols = this.db.getSymbolsByProject(projectId);
+      const alreadyEmbedded = this.db.getSymbolIdsWithEmbeddings(projectId);
+      const toEmbed = allSymbols.filter(s => !alreadyEmbedded.has(s.id));
+
+      if (toEmbed.length === 0) return 0;
+
+      const texts = toEmbed.map(s =>
+        [`${s.kind} ${s.name}`, s.signature ?? '', (s.body ?? '').substring(0, 512)]
+          .filter(Boolean)
+          .join('\n')
+          .trim()
+      );
+
+      const vectors = await embedTexts(texts);
+
+      this.db.transaction(() => {
+        for (let i = 0; i < toEmbed.length; i++) {
+          const vec = vectors[i];
+          if (vec && vec.length > 0) {
+            this.db.upsertEmbedding(toEmbed[i].id, projectId, vec);
+          }
+        }
+      });
+
+      return vectors.filter(v => v && v.length > 0).length;
+    } catch {
+      return 0;
+    }
   }
 
   private resolveImport(
