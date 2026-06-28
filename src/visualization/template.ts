@@ -289,7 +289,7 @@ select.cfs:focus{border-color:rgba(74,158,255,0.40)}
 #cp-body{flex:1;overflow:auto}
 #cp-body::-webkit-scrollbar{width:4px}
 #cp-body::-webkit-scrollbar-thumb{background:rgba(50,70,110,0.35);border-radius:2px}
-#cp-lines{padding:10px 0;min-width:max-content}
+#cp-lines{padding:10px 0;min-width:max-content;color:#cccccc}
 .cp-line{
   display:flex;align-items:baseline;min-height:1em;
   line-height:1.65;padding:0 14px 0 0;
