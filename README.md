@@ -9,6 +9,8 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple?style=flat-square)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
 
+🌐 **English** · [Español](README.es.md)
+
 *An MCP server that turns any codebase into a queryable knowledge graph — and renders it as an interactive galaxy.*
 
 </div>
